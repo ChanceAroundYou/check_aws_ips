@@ -1,0 +1,9 @@
+version: '3'
+services:
+  check_aws_ips:
+    build: .
+    volumes:
+      - .:/app
+    container_name: check_aws_ips
+    environment:
+      - TZ=Asia/Shanghai
