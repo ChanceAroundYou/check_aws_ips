@@ -1,6 +1,7 @@
 import argparse
 import configparser
 
+import requests
 import boto3
 from agh import Adguardhome
 from logger import get_logger
@@ -54,6 +55,30 @@ def check_region(client, agh, force=False):
             ip_addr = change_ip(client, ip_name, instance_name, ip_addr)
 
         update_rewrite(client, agh, instance_name, ip_addr)
+        
+    checked_ip_list = [ip["ipAddress"] for ip in client.get_static_ips()["staticIps"]]
+    return checked_ip_list
+
+
+def update_checked_ip_list_to_clash(checked_ip_list):
+    url = 'https://openwrt.cheerl.space:9080/cgi-bin/update_clash'
+    data = ",".join(checked_ip_list)
+    response = requests.post(url, data=data, verify=False)
+    
+    if response.text == '1':
+        LOGGER.info("更新clash配置")
+
+        url = 'http://openwrt.cheerl.space:9090/configs?force=true'
+        headers = {
+            'authorization': 'Bearer 123456',
+            'content-type': 'application/json'
+        }
+        payload = {
+            'path': '',
+            'payload': ''
+        }
+        response = requests.put(url, headers=headers, json=payload)
+
 
 def main():
     config = configparser.ConfigParser()
@@ -74,6 +99,7 @@ def main():
 
     agh = Adguardhome(agh_name, agh_password, agh_base_url)
 
+    checked_ip_list = []
     for region_name in args.regions.split(","):
         LOGGER.info(f"检查区域{region_name}")
         client = boto3.client(
@@ -82,9 +108,12 @@ def main():
             aws_secret_access_key=args.secret,
             region_name=region_name,
         )
-        check_region(client, agh, args.force)
+        checked_ip_list += check_region(client, agh, args.force)
+        
+    update_checked_ip_list_to_clash(checked_ip_list)
 
     LOGGER.info("结束")
 
 if __name__ == "__main__":
     main()
+    # update_checked_ip_list_to_clash(['111.111.222.33', '555,22,4,2'])
