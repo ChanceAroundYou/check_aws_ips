@@ -27,7 +27,7 @@ def after_change_ip(client, new_ip_addr, instance_name):
 
     if not ping_ip(new_ip_addr):
         LOGGER.error(f"更换后IP异常, 重启服务器")
-        client.restart_instance(instanceName=instance_name)
+        client.reboot_instance(instanceName=instance_name)
 
 def update_rewrite(client, agh, instance_name, ip_addr):
     instance = client.get_instance(instanceName=instance_name)

@@ -16,7 +16,7 @@ def ping_retry(num_retries, wait_time):
                 if ping_func(ip_addr, *args, **kwargs):
                     return True
                 else:
-                    LOGGER.warning(f"IP {ip_addr} 异常，等待{wait_time}秒后{i}/{num_retries}次重试")
+                    LOGGER.warning(f"IP {ip_addr} 异常，等待{wait_time}秒后{i+1}/{num_retries}次重试")
                     time.sleep(wait_time)
             LOGGER.warning(f"IP {ip_addr} 无法连接")
             return False
