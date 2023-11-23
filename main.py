@@ -65,7 +65,7 @@ def update_checked_ip_list_to_clash(checked_ip_list):
     data = ",".join(checked_ip_list)
     response = requests.post(url, data=data, verify=False)
     
-    if response.text == '1':
+    if response.text[0] == '1':
         LOGGER.info("更新clash配置")
 
         url = 'http://openwrt.cheerl.space:9090/configs?force=true'

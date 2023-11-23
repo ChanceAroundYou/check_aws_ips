@@ -28,17 +28,21 @@ def ping_ip(ip_addr, ping_time=PING_TIME):
     LOGGER.info(f"检查IP{ip_addr}")
     try:
         # 执行系统的 ping 命令
-        output = subprocess.check_output(['ping', '-c', f'{ping_time}', ip_addr])
+        output = subprocess.check_output(['ping', '-c', f'{ping_time}', ip_addr]).decode('utf-8')
+        LOGGER.info(output)
         # 从输出结果中提取丢包率
-        packet_loss = re.search(r'(\d+)% packet loss', output.decode('utf-8'))
-        if packet_loss:
+        packet_loss = re.search(r'(\d+)% packet loss', output)
+        avg_delay = re.search(r'min/avg/max = (\d+\.\d+)/(\d+\.\d+)/(\d+\.\d+) ms', output)
+        if packet_loss and avg_delay:
             loss_rate = packet_loss.group(1)
-            # print(loss_rate, packet_loss)
-            if loss_rate != 100:
-                LOGGER.info(f"IP正常, 丢包率{loss_rate}%")
+            avg_delay_value = float(avg_delay.group(1))
+
+            LOGGER.info(f"丢包率{loss_rate}%, 延迟{avg_delay_value}ms")
+            if loss_rate != 100 and avg_delay_value > 5:
+                LOGGER.info(f"IP正常")
                 return True
 
-        LOGGER.warning(f"IP异常, 丢包率100%")
+        LOGGER.warning(f"IP异常")
         return False
 
     except subprocess.CalledProcessError as e:
