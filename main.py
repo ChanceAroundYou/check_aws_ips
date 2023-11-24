@@ -17,7 +17,7 @@ def change_ip(client, ip_name, instance_name, old_ip):
     new_ip = client.get_instance(instanceName=instance_name)["instance"][
         "publicIpAddress"
     ]
-    LOGGER.info(
+    LOGGER.warning(
         f"IP地址已更换, {region_name}的服务器{instance_name}, IP{ip_name}从{old_ip}更换至{new_ip}"
     )
     after_change_ip(client, new_ip, instance_name)
@@ -43,13 +43,13 @@ def check_region(client, agh, force=False):
         ip_name = ip["name"]
 
         if not ip["isAttached"]:
-            LOGGER.info(f"IP{ip_name}: {ip_addr}未附着到服务器")
+            LOGGER.error(f"IP{ip_name}: {ip_addr}未附着到服务器")
             continue
 
         instance_name = ip["attachedTo"]
 
         if force:
-            LOGGER.info(f"强制更换IP{ip_name}:{ip_addr}")
+            LOGGER.warning(f"强制更换IP{ip_name}:{ip_addr}")
             ip_addr = change_ip(client, ip_name, instance_name, ip_addr)
         elif not ping_ip(ip_addr):
             ip_addr = change_ip(client, ip_name, instance_name, ip_addr)
@@ -66,7 +66,7 @@ def update_checked_ip_list_to_clash(checked_ip_list):
     response = requests.post(url, data=data, verify=False)
     
     if response.text[0] == '1':
-        LOGGER.info("更新clash配置")
+        LOGGER.warning("更新clash配置")
 
         url = 'http://openwrt.cheerl.space:9090/configs?force=true'
         headers = {
