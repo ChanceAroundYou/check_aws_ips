@@ -32,10 +32,10 @@ def ping_ip(ip_addr, ping_time=PING_TIME):
         LOGGER.info(output)
         # 从输出结果中提取丢包率
         packet_loss = re.search(r'(\d+)% packet loss', output)
-        avg_delay = re.search(r'min/avg/max = (\d+\.\d+)/(\d+\.\d+)/(\d+\.\d+) ms', output)
+        avg_delay = re.search(r'min/avg/max(?:/mdev)* = (\d+\.*\d+)/(\d+\.*\d+)/(\d+\.*\d+)(?:/\d+\.*\d+)* ms', output)
         if packet_loss and avg_delay:
             loss_rate = packet_loss.group(1)
-            avg_delay_value = float(avg_delay.group(1))
+            avg_delay_value = float(avg_delay.group(2))
 
             LOGGER.info(f"丢包率{loss_rate}%, 延迟{avg_delay_value}ms")
             if loss_rate != 100 and avg_delay_value > 5:

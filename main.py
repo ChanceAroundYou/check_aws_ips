@@ -9,16 +9,17 @@ from ping import ping_ip
 
 LOGGER = get_logger()
 
-def change_ip(client, ip_name, instance_name, old_ip):
+def change_ip(client, ip_name, instance_name, old_ip, no_release=False):
     region_name = client.meta.region_name
-    client.release_static_ip(staticIpName=ip_name)
+    if not no_release:
+        client.release_static_ip(staticIpName=ip_name)
     client.allocate_static_ip(staticIpName=ip_name)
     client.attach_static_ip(staticIpName=ip_name, instanceName=instance_name)
     new_ip = client.get_instance(instanceName=instance_name)["instance"][
         "publicIpAddress"
     ]
     LOGGER.warning(
-        f"IP地址已更换, {region_name}的服务器{instance_name}, IP{ip_name}从{old_ip}更换至{new_ip}"
+        f"IP地址已更换, {region_name}的服务器{instance_name}, {ip_name}从{old_ip}更换至{new_ip}"
     )
     after_change_ip(client, new_ip, instance_name)
     return new_ip
@@ -36,21 +37,32 @@ def update_rewrite(client, agh, instance_name, ip_addr):
     LOGGER.info(f"添改rewrite: {domain} -> {ip_addr}")
     agh.add_or_update_rewrite(domain, ip_addr)
 
-def check_region(client, agh, force=False):
-    ip_list = client.get_static_ips()["staticIps"]
+def check_region(client: boto3.Session.client, agh, force=False):
+    ip_list = client.get_static_ips()["staticIps"]    
+    
     for ip in ip_list:
         ip_addr = ip["ipAddress"]
         ip_name = ip["name"]
 
         if not ip["isAttached"]:
-            LOGGER.error(f"IP{ip_name}: {ip_addr}未附着到服务器")
-            continue
+            LOGGER.error(f"IP{ip_name}: {ip_addr}未附着到服务器, 删除")
+            client.release_static_ip(staticIpName=ip_name)
 
-        instance_name = ip["attachedTo"]
+    instance_list = client.get_instances()['instances']
+    for instance in instance_list:
+        instance_name = instance["name"]
+        ip_name = instance["tags"][0]["key"]
+        ip_addr = instance["publicIpAddress"]
+        is_static_ip = instance['isStaticIp']
 
-        if force:
-            LOGGER.warning(f"强制更换IP{ip_name}:{ip_addr}")
+        if not is_static_ip:
+            LOGGER.warning(f"服务器{instance_name}不是静态IP")
+            ip_addr = change_ip(client, ip_name, instance_name, ip_addr, no_release=True)
+
+        elif force:
+            LOGGER.warning(f"强制更换{instance_name}:{ip_addr}")
             ip_addr = change_ip(client, ip_name, instance_name, ip_addr)
+
         elif not ping_ip(ip_addr):
             ip_addr = change_ip(client, ip_name, instance_name, ip_addr)
 
@@ -116,4 +128,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # update_checked_ip_list_to_clash(['111.111.222.33', '555,22,4,2'])
