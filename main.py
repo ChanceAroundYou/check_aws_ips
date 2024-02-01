@@ -48,6 +48,7 @@ def check_region(client: boto3.Session.client, agh, force=False):
             LOGGER.error(f"IP{ip_name}: {ip_addr}未附着到服务器, 删除")
             client.release_static_ip(staticIpName=ip_name)
 
+    checked_ip_list = []
     instance_list = client.get_instances()['instances']
     for instance in instance_list:
         instance_name = instance["name"]
@@ -64,17 +65,23 @@ def check_region(client: boto3.Session.client, agh, force=False):
             ip_addr = change_ip(client, ip_name, instance_name, ip_addr)
 
         elif not ping_ip(ip_addr):
+            LOGGER.warning(f"服务器{instance_name}的IP{ip_addr}异常")
             ip_addr = change_ip(client, ip_name, instance_name, ip_addr)
+        else:
+            LOGGER.info(f"服务器{instance_name}的IP{ip_addr}正常")
+            continue
 
         update_rewrite(client, agh, instance_name, ip_addr)
+        checked_ip_list.append(ip_addr)
         
-    checked_ip_list = [ip["ipAddress"] for ip in client.get_static_ips()["staticIps"]]
+    # checked_ip_list = [ip["ipAddress"] for ip in client.get_static_ips()["staticIps"]]
     return checked_ip_list
 
 
 def update_checked_ip_list_to_clash(checked_ip_list):
     url = 'https://openwrt.cheerl.space:9080/cgi-bin/update_clash'
     data = ",".join(checked_ip_list)
+    LOGGER.info(data)
     response = requests.post(url, data=data, verify=False)
     
     if response.text[0] == '1':
@@ -121,8 +128,9 @@ def main():
             region_name=region_name,
         )
         checked_ip_list += check_region(client, agh, args.force)
-        
-    update_checked_ip_list_to_clash(checked_ip_list)
+    
+    if checked_ip_list:
+        update_checked_ip_list_to_clash(checked_ip_list)
 
     LOGGER.info("结束")
 
