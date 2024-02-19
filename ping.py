@@ -1,12 +1,12 @@
+import functools
 import re
 import subprocess
-from tcping import Ping
-from logger import get_logger
 import time
-import functools
+
+from loguru import logger
+from tcping import Ping
 
 PING_TIME = 10
-LOGGER  = get_logger()
 
 def ping_retry(num_retries, wait_time):
     def decorator(ping_func):
@@ -16,20 +16,20 @@ def ping_retry(num_retries, wait_time):
                 if ping_func(ip_addr, *args, **kwargs):
                     return True
                 else:
-                    LOGGER.warning(f"IP {ip_addr} 异常，等待{wait_time}秒后{i+1}/{num_retries}次重试")
+                    logger.warning(f"IP {ip_addr} 异常，等待{wait_time}秒后{i+1}/{num_retries}次重试")
                     time.sleep(wait_time)
-            LOGGER.error(f"IP {ip_addr} 无法连接")
+            logger.error(f"IP {ip_addr} 无法连接")
             return False
         return wrapper
     return decorator
 
 @ping_retry(num_retries=3, wait_time=5)
 def ping_ip(ip_addr, ping_time=PING_TIME):
-    LOGGER.info(f"检查IP{ip_addr}")
+    logger.info(f"检查IP{ip_addr}")
     try:
         # 执行系统的 ping 命令
         output = subprocess.check_output(['ping', '-c', f'{ping_time}', ip_addr]).decode('utf-8')
-        LOGGER.info(output)
+        logger.info(output)
         # 从输出结果中提取丢包率
         packet_loss = re.search(r'(\d+)% packet loss', output)
         avg_delay = re.search(r'min/avg/max(?:/mdev)* = (\d+\.*\d+)/(\d+\.*\d+)/(\d+\.*\d+)(?:/\d+\.*\d+)* ms', output)
@@ -37,32 +37,32 @@ def ping_ip(ip_addr, ping_time=PING_TIME):
             loss_rate = packet_loss.group(1)
             avg_delay_value = float(avg_delay.group(2))
 
-            LOGGER.info(f"丢包率{loss_rate}%, 延迟{avg_delay_value}ms")
+            logger.info(f"丢包率{loss_rate}%, 延迟{avg_delay_value}ms")
             if loss_rate != 100 and avg_delay_value > 5:
-                LOGGER.info(f"IP正常")
+                logger.info(f"IP正常")
                 return True
 
-        LOGGER.warning(f"IP异常")
+        logger.warning(f"IP异常")
         return False
 
     except subprocess.CalledProcessError as e:
-        LOGGER.error(f"Ping failed: {e}")
+        logger.error(f"Ping failed: {e}")
         return False
     except Exception as e:
-        LOGGER.error(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")
         return False
 
 @ping_retry(num_retries=3, wait_time=5)
 def tcpping_ip(ip_addr, ping_time=PING_TIME):
-    LOGGER.info(f"检查IP{ip_addr}")
+    logger.info(f"检查IP{ip_addr}")
     
     ping = Ping(ip_addr)
     ping.ping(ping_time)
     success_rate = ping.result.rows[0].success_rate
 
     if success_rate == "0.00%":
-        LOGGER.warning(f"IP异常, {success_rate}")
+        logger.warning(f"IP异常, {success_rate}")
         return False
     else:
-        LOGGER.info(f"IP正常, {success_rate}")
+        logger.info(f"IP正常, {success_rate}")
         return True

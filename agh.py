@@ -1,5 +1,6 @@
 import requests
 
+
 class Adguardhome:
     def __init__(self, name, password, base_url):
         self.name = name
@@ -47,22 +48,22 @@ class Adguardhome:
         requests.post(url, json=payload, cookies=self.cookies)
     
     def add_or_update_rewrite(self, domain, ip):
-        rewrite_list = self.get_rewrite_dict()
-        if domain in rewrite_list:
-            old_ip = rewrite_list[domain]
+        rewrite_dict = self.get_rewrite_dict()
+        if domain in rewrite_dict:
+            old_ip = rewrite_dict[domain]
             self._update_rewrite(domain, ip, old_ip)
         else:
             self._add_rewrite(domain, ip)
-            
+
     def delete_rewrite(self, domain):
-        rewrite_list = self.get_rewrite_dict()
-        if domain in rewrite_list:
-            ip = rewrite_list[domain]
+        rewrite_dict = self.get_rewrite_dict()
+        if domain in rewrite_dict:
+            ip = rewrite_dict[domain]
             self._delete_rewrite(domain, ip)
             
     def find_domain(self, ip):
-        rewrite_list = self.get_rewrite_dict()
-        for domain, rewrite_ip in rewrite_list.items():
+        rewrite_dict = self.get_rewrite_dict()
+        for domain, rewrite_ip in rewrite_dict.items():
             if ip == rewrite_ip:
                 return domain
         return None
@@ -75,4 +76,3 @@ if __name__ == '__main__':
     agh = Adguardhome(name, password, base_url)
     agh.get_cookies()
     rewrite_list = agh.get_rewrite_dict()
-    print(rewrite_list)
