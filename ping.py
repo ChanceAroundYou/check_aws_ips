@@ -29,7 +29,7 @@ def ping_ip(ip_addr, ping_time=PING_TIME):
     try:
         # 执行系统的 ping 命令
         output = subprocess.check_output(['ping', '-c', f'{ping_time}', ip_addr]).decode('utf-8')
-        logger.info(output)
+        logger.info('\n'+output)
         # 从输出结果中提取丢包率
         packet_loss = re.search(r'(\d+)% packet loss', output)
         avg_delay = re.search(r'min/avg/max(?:/mdev)* = (\d+\.*\d+)/(\d+\.*\d+)/(\d+\.*\d+)(?:/\d+\.*\d+)* ms', output)
