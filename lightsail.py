@@ -50,19 +50,25 @@ def check_region(client: boto3.Session.client, force=False):
         if not is_static_ip:
             logger.warning(f"服务器{instance_name}不是静态IP")
             ip_addr = change_ip(client, domain, instance_name, ip_addr, no_release=True)
+            changed = True
 
         elif force:
             logger.warning(f"强制更换{instance_name}:{ip_addr}")
             ip_addr = change_ip(client, domain, instance_name, ip_addr)
+            changed = True
 
         elif not ping_ip(ip_addr):
             logger.warning(f"服务器{instance_name}的IP{ip_addr}异常")
             ip_addr = change_ip(client, domain, instance_name, ip_addr)
+            changed = True
         else:
             logger.info(f"服务器{instance_name}的IP{ip_addr}正常")
-            continue
+            changed = False
 
-        updated_ips[domain] = ip_addr
+        updated_ips[domain] = {
+            'ip': ip_addr,
+            'changed': changed
+        }
         
     # checked_ip_list = [ip["ipAddress"] for ip in client.get_static_ips()["staticIps"]]
     return updated_ips

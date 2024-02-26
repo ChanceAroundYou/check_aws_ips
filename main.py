@@ -12,34 +12,52 @@ from lightsail import check_lightsail
 config = configparser.ConfigParser()
 config.read("config.ini")
 default = config["DEFAULT"]
+rule_aws_path = 'aws.yaml'
 
 def update_ips_to_clash(updated_ips):
-    # if not updated_ips:
-    #     return
+    if not any([domain_info['changed'] for domain_info in updated_ips.values()]):
+        return
 
-    url = "https://openwrt.cheerl.space:9080/cgi-bin/update_clash"
-    data = ",".join(updated_ips.keys())
-    response = requests.post(url, data=data, verify=False)
+    logger.warning("更新clash配置")
 
-    if response.text[0] == "1":
-        logger.warning("更新clash配置")
+    with open(rule_aws_path, "w") as f:
+        f.write('payload:\n')
+        for _, domain_info in updated_ips.items():
+            f.write(f"  - IP-CIDR,{domain_info['ip']}/32\n")
 
-        url = "http://openwrt.cheerl.space:9090/configs?force=true"
-        headers = {"authorization": "Bearer 123456", "content-type": "application/json"}
-        payload = {"path": "", "payload": ""}
-        response = requests.put(url, headers=headers, json=payload)
+    # url = "https://openwrt.cheerl.space:9080/cgi-bin/update_clash"
+    # data = ",".join(updated_ips.keys())
+    # response = requests.post(url, data=data, verify=False)
+    # logger.info(response.text)
+    
+    # if response.text[0] == "1":
+    logger.warning("更新clash配置")
+
+    headers = {"authorization": "Bearer 123456", "content-type": "application/json"}
+    rule_url = 'http://openwrt.cheerl.space:9090/providers/rules/AWS'
+    response = requests.put(rule_url, headers=headers)
+    logger.info(response.text)
+
+    reload_url = "http://openwrt.cheerl.space:9090/configs?force=true"
+    payload = {"path": "", "payload": ""}
+    response = requests.put(reload_url, headers=headers, json=payload)
+    logger.info(response.text)
 
 
 def update_ips_to_agh(agh, updated_ips):
-    for domain, ip_addr in updated_ips.items():
-        logger.warning(f"修改AGH rewrite {domain} -> {ip_addr}")
-        agh.add_or_update_rewrite(domain, ip_addr)
+    for domain, domain_info in updated_ips.items():
+        if domain_info['changed']:
+            logger.warning(f"修改AGH rewrite {domain} -> {domain_info['ip']}")
+            agh.add_or_update_rewrite(domain, domain_info['ip'])
 
 
 def update_ips_to_aliyun(dns, updated_ips):
-    for domain, ip_addr in updated_ips.items():
-        logger.warning(f"更改AliYunDNS {domain} -> {ip_addr}")
-        dns.add_or_update_domain_record(domain, ip_addr)
+    for domain, domain_info in updated_ips.items():
+        if domain_info['changed']:
+            logger.warning(f"更改AliYunDNS {domain} -> {domain_info['ip']}")
+            dns.add_or_update_domain_record(domain, domain_info['ip'])
+
+
 
 @logger.catch()
 @click.command()
@@ -57,13 +75,18 @@ def update_ips_to_aliyun(dns, updated_ips):
 def main(log_path, agh_name, agh_password, agh_base_url, aliyun_key, aliyun_secret, aliyun_domain, aws_key, aws_secret, regions, force):
     log_dir = os.path.dirname(log_path)
     os.makedirs(log_dir, exist_ok=True)
-    logger.add(log_path, rotation="1 day", retention="7 days", level="INFO")
+    logger.add(log_path, rotation="23:59", retention="7 days", level="INFO")
 
     agh = Adguardhome(agh_name, agh_password, agh_base_url)
     dns = AliyunDNS(aliyun_key, aliyun_secret, aliyun_domain)
 
     updated_ips = check_lightsail(aws_key, aws_secret, regions, force)
-
+    now_ips = agh.get_rewrite_dict()
+    
+    for domain, domain_info in updated_ips.items():
+        if now_ips.get(domain, '') != domain_info['ip']:
+            updated_ips[domain]['changed'] = True
+    
     update_ips_to_agh(agh, updated_ips)
     update_ips_to_aliyun(dns, updated_ips)
     update_ips_to_clash(updated_ips)
