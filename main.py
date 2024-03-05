@@ -55,9 +55,7 @@ def update_ips_to_aliyun(dns, updated_ips):
     for domain, domain_info in updated_ips.items():
         if domain_info['changed']:
             logger.warning(f"更改AliYunDNS {domain} -> {domain_info['ip']}")
-            dns.add_or_update_domain_record(domain, domain_info['ip'])
-
-
+            dns.add_or_update_domain_record(domain.split('.')[0], domain_info['ip'])
 
 @logger.catch()
 @click.command()
