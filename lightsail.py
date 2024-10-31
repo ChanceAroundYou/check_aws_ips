@@ -1,7 +1,7 @@
 import boto3
 from loguru import logger
 
-from ping import ping_ip
+from ping import detect_ip
 
 
 def change_ip(client, ip_name, instance_name, old_ip, no_release=False):
@@ -16,14 +16,14 @@ def change_ip(client, ip_name, instance_name, old_ip, no_release=False):
     logger.warning(
         f"IP地址已更换, {region_name}的服务器{instance_name}, {ip_name}从{old_ip}更换至{new_ip}"
     )
-    after_change_ip(client, new_ip, instance_name)
+    after_change_ip(client, ip_name, new_ip, instance_name)
     return new_ip
 
-def after_change_ip(client, new_ip_addr, instance_name):
-    logger.info(f"检查更换后IP")
+def after_change_ip(client, ip_name, new_ip_addr, instance_name):
+    logger.info("检查更换后IP")
 
-    if not ping_ip(new_ip_addr):
-        logger.error(f"更换后IP异常, 重启服务器")
+    if not detect_ip(new_ip_addr, ip_name):
+        logger.error("更换后IP异常, 重启服务器")
         client.reboot_instance(instanceName=instance_name)
 
 
@@ -57,7 +57,7 @@ def check_region(client: boto3.Session.client, force=False):
             ip_addr = change_ip(client, domain, instance_name, ip_addr)
             changed = True
 
-        elif not ping_ip(ip_addr):
+        elif not detect_ip(ip_addr, domain):
             logger.warning(f"服务器{instance_name}的IP{ip_addr}异常")
             ip_addr = change_ip(client, domain, instance_name, ip_addr)
             changed = True

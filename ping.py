@@ -24,7 +24,29 @@ def ping_retry(num_retries, wait_time):
     return decorator
 
 @ping_retry(num_retries=3, wait_time=5)
-def ping_ip(ip_addr, ping_time=PING_TIME):
+def wget_ip(ip_addr, domain='', ping_time=PING_TIME):
+    logger.info(f"检查IP{ip_addr}")
+    try:
+
+        output = subprocess.check_output(['wget', '-O', '/dev/null', '-T', f'{ping_time}', f'https://{domain}/xui/']).decode('utf-8')
+        logger.info('\n'+output)
+
+        if "'/dev/null' saved" in output:
+            logger.info(f"IP正常")
+            return True
+        else:
+            logger.warning(f"IP异常")
+            return False
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Ping failed: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+        return False
+
+@ping_retry(num_retries=3, wait_time=5)
+def ping_ip(ip_addr, domain='', ping_time=PING_TIME):
     logger.info(f"检查IP{ip_addr}")
     try:
         # 执行系统的 ping 命令
@@ -34,11 +56,11 @@ def ping_ip(ip_addr, ping_time=PING_TIME):
         packet_loss = re.search(r'(\d+)% packet loss', output)
         avg_delay = re.search(r'min/avg/max(?:/mdev)* = (\d+\.*\d+)/(\d+\.*\d+)/(\d+\.*\d+)(?:/\d+\.*\d+)* ms', output)
         if packet_loss and avg_delay:
-            loss_rate = packet_loss.group(1)
+            loss_rate = float(packet_loss.group(1))
             avg_delay_value = float(avg_delay.group(2))
 
             logger.info(f"丢包率{loss_rate}%, 延迟{avg_delay_value}ms")
-            if loss_rate != 100 and avg_delay_value > 5:
+            if loss_rate < 40 and  5 < avg_delay_value < 500:
                 logger.info(f"IP正常")
                 return True
 
@@ -53,7 +75,7 @@ def ping_ip(ip_addr, ping_time=PING_TIME):
         return False
 
 @ping_retry(num_retries=3, wait_time=5)
-def tcpping_ip(ip_addr, ping_time=PING_TIME):
+def tcpping_ip(ip_addr, domain='', ping_time=PING_TIME):
     logger.info(f"检查IP{ip_addr}")
     
     ping = Ping(ip_addr)
@@ -66,3 +88,9 @@ def tcpping_ip(ip_addr, ping_time=PING_TIME):
     else:
         logger.info(f"IP正常, {success_rate}")
         return True
+    
+def detect_ip(ip_addr, domain='', ping_time=PING_TIME):
+    if domain in []:
+        return wget_ip(ip_addr, domain, ping_time)
+    else:
+        return ping_ip(ip_addr, domain, ping_time)
