@@ -36,11 +36,11 @@ def update_ips_to_clash(updated_ips):
     os.system('/usr/bin/scp aws.yaml router:/etc/openclash/rule_provider/AWS')
 
     headers = {"authorization": "Bearer 123456", "content-type": "application/json"}
-    rule_url = 'http://openwrt.cheerl.space:9090/providers/rules/AWS'
+    rule_url = 'http://openwrt.xiaokubao.space:9090/providers/rules/AWS'
     response = requests.put(rule_url, headers=headers)
     logger.info(response.text)
 
-    reload_url = "http://openwrt.cheerl.space:9090/configs?force=true"
+    reload_url = "http://openwrt.xiaokubao.space:9090/configs?force=true"
     payload = {"path": "", "payload": ""}
     response = requests.put(reload_url, headers=headers, json=payload)
     logger.info(response.text)
