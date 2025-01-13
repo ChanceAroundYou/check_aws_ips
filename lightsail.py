@@ -2,6 +2,7 @@ import boto3
 from loguru import logger
 
 from ping import detect_ip
+import retry
 
 
 def change_ip(client, ip_name, instance_name, old_ip, no_release=False):
@@ -73,6 +74,7 @@ def check_region(client: boto3.Session.client, force=False):
     # checked_ip_list = [ip["ipAddress"] for ip in client.get_static_ips()["staticIps"]]
     return updated_ips
 
+@retry.retry(tries=3, delay=5)
 def check_lightsail(aws_key, aws_secret, regions, force):
     updated_ips = {}
     for region_name in regions.split(","):

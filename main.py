@@ -4,6 +4,7 @@ import os
 import click
 import requests
 from loguru import logger
+import retry
 
 from agh import Adguardhome
 from aliyundns import AliyunDNS
@@ -45,20 +46,21 @@ def update_ips_to_clash(updated_ips):
     response = requests.put(reload_url, headers=headers, json=payload)
     logger.info(response.text)
 
-
+@retry.retry(tries=3, delay=5)
 def update_ips_to_agh(agh, updated_ips):
     for domain, domain_info in updated_ips.items():
         if domain_info['changed']:
             logger.warning(f"修改AGH rewrite {domain} -> {domain_info['ip']}")
             agh.add_or_update_rewrite(domain, domain_info['ip'])
 
-
+@retry.retry(tries=3, delay=5)
 def update_ips_to_aliyun(dns, updated_ips):
     for domain, domain_info in updated_ips.items():
         if domain_info['changed']:
             logger.warning(f"更改AliYunDNS {domain} -> {domain_info['ip']}")
             dns.add_or_update_domain_record(domain.split('.')[0], domain_info['ip'])
-            
+
+@retry.retry(tries=3, delay=5)
 def update_ips_to_gist(gist_api: Gist, gist_id, updated_ips):
     for domain, domain_info in updated_ips.items():
         if domain_info['changed']:
@@ -101,10 +103,13 @@ def main(
         if now_ips.get(domain, '') != domain_info['ip']:
             updated_ips[domain]['changed'] = True
 
-    update_ips_to_gist(gist_api, gist_id, updated_ips)
     update_ips_to_aliyun(dns, updated_ips)
     update_ips_to_agh(agh, updated_ips)
     update_ips_to_clash(updated_ips)
+    try:
+        update_ips_to_gist(gist_api, gist_id, updated_ips)
+    except Exception as e:
+        logger.error(e)
 
     logger.info("结束")
 
