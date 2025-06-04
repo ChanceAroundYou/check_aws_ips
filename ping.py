@@ -60,7 +60,7 @@ def ping_ip(ip_addr, domain='', ping_time=PING_TIME):
             avg_delay_value = float(avg_delay.group(2))
 
             logger.info(f"丢包率{loss_rate}%, 延迟{avg_delay_value}ms")
-            if loss_rate < 40 and  5 < avg_delay_value < 500:
+            if loss_rate <= 50 and  5 < avg_delay_value < 1000:
                 logger.info(f"IP正常")
                 return True
 

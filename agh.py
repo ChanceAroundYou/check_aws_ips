@@ -70,9 +70,9 @@ class Adguardhome:
 
 
 if __name__ == '__main__':
-    name = 'name'
-    password = 'password'
-    base_url = 'http://agh/control'
+    name = 'root'
+    password = 'Xkb111717'
+    base_url = 'http://openwrt.xiaokubao.space:3000/control'
     agh = Adguardhome(name, password, base_url)
     agh.get_cookies()
     rewrite_list = agh.get_rewrite_dict()

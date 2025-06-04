@@ -93,7 +93,7 @@ def main(
     logger.add(log_path, rotation="23:59", retention="7 days", level="INFO")
 
     agh = Adguardhome(agh_name, agh_password, agh_base_url)
-    dns = AliyunDNS(aliyun_key, aliyun_secret, aliyun_domain)
+    # dns = AliyunDNS(aliyun_key, aliyun_secret, aliyun_domain)
     gist_api = Gist(gist_token)
 
     updated_ips = check_lightsail(aws_key, aws_secret, regions, force)
@@ -103,7 +103,7 @@ def main(
         if now_ips.get(domain, '') != domain_info['ip']:
             updated_ips[domain]['changed'] = True
 
-    update_ips_to_aliyun(dns, updated_ips)
+    # update_ips_to_aliyun(dns, updated_ips)
     update_ips_to_agh(agh, updated_ips)
     update_ips_to_clash(updated_ips)
     try:
