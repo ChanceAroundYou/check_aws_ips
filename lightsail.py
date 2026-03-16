@@ -1,4 +1,5 @@
 import boto3
+from botocore.client import BaseClient
 from loguru import logger
 
 from ping import detect_ip
@@ -29,8 +30,8 @@ def after_change_ip(client, ip_name, new_ip_addr, instance_name):
 
 
 
-def check_region(client: boto3.Session.client, force=False):
-    ip_list = client.get_static_ips()["staticIps"]    
+def check_region(client: BaseClient, force=False):
+    ip_list = client.get_static_ips()["staticIps"]
     
     for ip in ip_list:
         ip_addr = ip["ipAddress"]
